@@ -1,0 +1,43 @@
+# Azure file copy from Git to Storage Account FileShare pipeline
+
+trigger:
+- master
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  subscription: 'guru-sv-test'
+  storage_account_name: 'sggurutestnewaug'
+  file_share_name: 'sggurutestnewaug'
+  directory: 'batch_copy_test'
+
+steps:
+- task: AzureCLI@2
+  displayName: Deploy Azure RM templates
+  inputs:
+    azureSubscription: $(subscription)
+    scriptType: ps
+    scriptLocation: inlineScript
+    inlineScript: |
+      az group deployment create -g rg-deployment --template-file deploy.json --parameters deploy-params.json
+
+- task: AzureCLI@2
+  displayName: Create directory in file share
+  inputs:
+    azureSubscription: $(subscription)
+    scriptType: ps
+    scriptLocation: inlineScript
+    inlineScript: |
+      $storageAccountKey = "$(az storage account keys list --resource-group "rg-deployment" --account-name $(storage_account_name) --query "[0].value" | tr -d '"')"
+      echo "##vso[task.setvariable variable=storageAccountKey]$storageAccountKey"
+      az storage directory create --account-name $(storage_account_name) --account-key $storageAccountKey --share-name $(file_share_name) --name $(directory) --output none
+    
+- task: AzureCLI@2
+  displayName: Add file to fileshare directory
+  inputs:
+    azureSubscription: $(subscription)
+    scriptType: ps
+    scriptLocation: inlineScript
+    inlineScript: |
+      az storage file upload-batch --account-key "$(storageAccountKey)" --account-name $(storage_account_name) --destination $(file_share_name)/$(directory) --source $(System.DefaultWorkingDirectory)/Scripts
