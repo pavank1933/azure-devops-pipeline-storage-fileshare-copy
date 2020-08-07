@@ -10,7 +10,7 @@ variables:
   subscription: 'guru-sv-test'
   storage_account_name: 'sggurutestnewaug'
   file_share_name: 'sggurutestnewaug'
-  directory: 'batch_copy_test'
+  directory: 'Scripts'
 
 steps:
 - task: AzureCLI@2
@@ -20,7 +20,7 @@ steps:
     scriptType: ps
     scriptLocation: inlineScript
     inlineScript: |
-      az group deployment create -g rg-deployment --template-file deploy.json --parameters deploy-params.json
+      az group deployment create -g rg-deployment --template-file deploy.json --parameters storageAccountName=$(storage_account_name) fileShareName=$(file_share_name)
 
 - task: AzureCLI@2
   displayName: Create directory in file share
